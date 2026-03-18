@@ -3,11 +3,12 @@
 // ═══════════════════════════════════════════════════════════════
 function fmt(val, sig = 8) {
   if (typeof val !== 'number' || isNaN(val)) return "Error";
-  if (!isFinite(val)) return val > 0 ? "Infinity" : "-Infinity";
-  if (val === 0) return "0";
-  const abs = Math.abs(val);
-  if (abs >= 1e-3 && abs < 1e6) return parseFloat(val.toPrecision(sig)).toString();
-  return val.toExponential(sig - 1);
+  const cleaned = typeof cleanFloat === 'function' ? cleanFloat(val) : val;
+  if (!isFinite(cleaned)) return cleaned > 0 ? "Infinity" : "-Infinity";
+  if (cleaned === 0) return "0";
+  const abs = Math.abs(cleaned);
+  if (abs >= 1e-3 && abs < 1e6) return parseFloat(cleaned.toPrecision(sig)).toString();
+  return cleaned.toExponential(sig - 1);
 }
 
 const supMap = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'};
@@ -80,7 +81,7 @@ function evalExpr(expr, unitSys, varValues = {}) {
     }
 
     if (isNaN(numResult)) return null;
-    return cleanFloat(numResult);
+    return numResult;
   } catch(err) {
     return null;
   }
