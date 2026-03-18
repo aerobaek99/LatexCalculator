@@ -3,18 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Physics Calculator — Modern Physics Appendix A</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <title>Physics Calculator — Modern Physics · Appendix A</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body, #root { width: 100%; height: 100%; }
+    html, body { margin: 0; padding: 0; }
   </style>
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel" data-type="module">
+  <script type="text/babel">
 const { useState, useCallback, useMemo, useRef, useEffect } = React;
 
 // ═══════════════════════════════════════════════════════════════
@@ -44,11 +43,11 @@ const CONSTANTS = {
 };
 
 const PARTICLES = {
-  me:     { name: "Electron mass",  symbol: "mₑ",  si: 9.1093829e-31,  siU: "kg",  ev: 0.51099893,    evU: "MeV/c²", u: 5.485799095e-4, mev: 0.51099893, keys: ["m_e","me"] },
-  mp:     { name: "Proton mass",    symbol: "mₚ",  si: 1.67262178e-27, siU: "kg",  ev: 938.27205,     evU: "MeV/c²", u: 1.0072764668,   mev: 938.27205,  keys: ["m_p","mp"] },
-  mn:     { name: "Neutron mass",   symbol: "mₙ",  si: 1.67492735e-27, siU: "kg",  ev: 939.56538,     evU: "MeV/c²", u: 1.0086649160,   mev: 939.56538,  keys: ["m_n","mn"] },
-  md:     { name: "Deuteron mass",  symbol: "m_d",  si: 3.3435835e-27,  siU: "kg",  ev: 1875.61286,    evU: "MeV/c²", u: 2.0135532127,   mev: 1875.61286, keys: ["m_d"] },
-  malpha: { name: "Alpha mass",     symbol: "mα",   si: 6.6446568e-27,  siU: "kg",  ev: 3727.3792,     evU: "MeV/c²", u: 4.001506179,    mev: 3727.3792,  keys: ["m_alpha"] },
+  me:     { name: "Electron mass",  symbol: "mₑ",  si: 9.1093829e-31,  siU: "kg",  ev: 5.1099895e5,   evU: "eV/c²", u: 5.485799095e-4, mev: 0.51099893, keys: ["m_e","me"] },
+  mp:     { name: "Proton mass",    symbol: "mₚ",  si: 1.67262178e-27, siU: "kg",  ev: 9.38272081e8,  evU: "eV/c²", u: 1.0072764668,   mev: 938.27205,  keys: ["m_p","mp"] },
+  mn:     { name: "Neutron mass",   symbol: "mₙ",  si: 1.67492735e-27, siU: "kg",  ev: 9.39565413e8,  evU: "eV/c²", u: 1.0086649160,   mev: 939.56538,  keys: ["m_n","mn"] },
+  md:     { name: "Deuteron mass",  symbol: "m_d",  si: 3.3435835e-27,  siU: "kg",  ev: 1.875612928e9, evU: "eV/c²", u: 2.0135532127,   mev: 1875.61286, keys: ["m_d"] },
+  malpha: { name: "Alpha mass",     symbol: "mα",   si: 6.6446568e-27,  siU: "kg",  ev: 3.727379378e9, evU: "eV/c²", u: 4.001506179,    mev: 3727.3792,  keys: ["m_alpha"] },
 };
 
 const CONVERSIONS = {
@@ -68,6 +67,18 @@ const PREFIXES = [
   { name: "centi", abbr: "c", exp: -2 }, { name: "kilo", abbr: "K", exp: 3 },
   { name: "mega", abbr: "M", exp: 6 },   { name: "giga", abbr: "G", exp: 9 },
   { name: "tera", abbr: "T", exp: 12 },  { name: "peta", abbr: "P", exp: 15 },
+];
+
+const MAGNITUDES = [
+  { label: "Direct Input (×1)", val: 1 },
+  { label: "n (nano, 10⁻⁹)", val: 1e-9 },
+  { label: "μ (micro, 10⁻⁶)", val: 1e-6 },
+  { label: "m (milli, 10⁻³)", val: 1e-3 },
+  { label: "c (centi, 10⁻²)", val: 1e-2 },
+  { label: "k (kilo, 10³)", val: 1e3 },
+  { label: "M (Mega, 10⁶)", val: 1e6 },
+  { label: "G (Giga, 10⁹)", val: 1e9 },
+  { label: "u (Atomic Mass Unit)", val: 1.6605390666e-27 }
 ];
 
 function buildKeywordMap() {
@@ -140,15 +151,19 @@ const EXPR_PRESETS = [
   { label: "[LaTeX] Thermal Energy kT/2", expr: "\\frac{k_{B} T}{2}", hint: "T: Temperature" },
   { label: "[LaTeX] Radioactive Decay", expr: "N_0 e_n^{-\\lambda t}", hint: "N_0, λ, t" },
   { label: "[LaTeX] Bohr Energy", expr: "-\\frac{E_{1}}{n^{2}}", hint: "n: Principal quantum number" },
-  { label: "[LaTeX] de Broglie Wavelength", expr: "\\frac{h}{\\sqrt{2 m_{e} E}}", hint: "E: Energy" },
+  { label: "[LaTeX] de Broglie Wavelength (by E)", expr: "\\frac{h}{\\sqrt{2 m_{e} E}}", hint: "E: Energy" },
+  { label: "[LaTeX] de Broglie Wavelength (by p)", expr: "\\frac{h}{p}", hint: "p: Momentum" },
   { label: "[LaTeX] Number Density ρN_A/M", expr: "\\frac{\\rho N_{A}}{M}", hint: "ρ: Density(kg/m³), M: Molar mass(kg/mol)" },
-  { label: "[LaTeX] Average Particle Distance d", expr: "n^{-1/3}", hint: "n: Number density" },
+  { label: "[LaTeX] Avg Particle Distance d", expr: "n^{-1/3}", hint: "n: Number density" },
   { label: "[LaTeX] Reduced Mass \\mu", expr: "\\frac{m_1 m_2}{m_1 + m_2}", hint: "m_1, m_2: Particle masses" },
   { label: "[LaTeX] Rotational Energy E_L", expr: "\\frac{\\hbar^2}{2I}L(L+1)", hint: "I: Moment of inertia, L: Quantum number" },
   { label: "[LaTeX] Moment of Inertia I", expr: "\\mu R^2", hint: "\\mu: Reduced mass, R: Distance" },
   { label: "[LaTeX] Vibrational Angular Freq \\omega", expr: "\\sqrt{\\frac{k}{\\mu}}", hint: "k: Spring constant, \\mu: Reduced mass" },
   { label: "[LaTeX] Boltzmann Dist Ratio N_2/N_1", expr: "\\frac{d_2}{d_1} e_n^{-(E_2-E_1)/(k_B T)}", hint: "d_1,d_2: Degeneracy, E: Energy, T: Temperature" },
-  { label: "[LaTeX] Average Fermi Energy E_{av}", expr: "\\frac{3}{5}E_F", hint: "E_F: Fermi energy" },
+  { label: "[LaTeX] Avg Fermi Energy E_{av}", expr: "\\frac{3}{5}E_F", hint: "E_F: Fermi energy" },
+  { label: "[LaTeX] Momentum p", expr: "\\sqrt{2m_n \\times E_F}", hint: "m_n: Neutron mass, E_F: Fermi energy" },
+  { label: "[LaTeX] Total Neutron Number N", expr: "\\frac{3.978 \\times 10^{30}}{1.675 \\times 10^{-27}}", hint: "M_n / m_n" },
+  { label: "[LaTeX] Volume of Sphere V", expr: "\\frac{4}{3}\\pi R^3", hint: "R: Radius" },
   { label: "[LaTeX] Neutron Star Radius R", expr: "\\frac{h^2}{G N^{1/3} m_n^3} (\\frac{9}{32\\pi^2})^{2/3}", hint: "N: Number of neutrons, m_n: Neutron mass" },
   { label: "[LaTeX] Neutron Fermi Energy", expr: "\\frac{h^2}{2m_n}(\\frac{3N}{8\\pi V})^{2/3}", hint: "m_n: Neutron mass, N: Number of neutrons, V: Volume" },
   { label: "[LaTeX] E_F (with &)", expr: "E_F & = \\frac{h^{2}}{2m}(\\frac{3N}{8\\pi V})^{2/3}", hint: "m,N,V" },
@@ -189,6 +204,7 @@ const DIMENSIONS = {
   ]},
   temperature: { label: "Temperature", conversions: (v) => [
     { label: "K", val: v }, { label: "°C", val: v-273.15 },
+    { label: "°F", val: (v-273.15)*9/5+32 },
     { label: "kT (eV)", val: 8.617332e-5*v }, { label: "kT (J)", val: 1.380649e-23*v },
   ]},
   frequency: { label: "Frequency", conversions: (v) => [
@@ -235,6 +251,18 @@ function isLatex(s) {
 
 function isMultiLineLatex(s) {
   return /\\begin\{/.test(s) || (s.includes('\\\\') && s.includes('&'));
+}
+
+function balanceParens(str) {
+  let open = 0, close = 0;
+  for (let i = 0; i < str.length; i++) {
+      if (str[i] === '(') open++;
+      else if (str[i] === ')') {
+          if (open > 0) open--;
+          else close++;
+      }
+  }
+  return '('.repeat(close) + str + ')'.repeat(open);
 }
 
 function parseLatexBlock(tex) {
@@ -287,7 +315,7 @@ function matchBrace(s, pos) {
 }
 
 function convertFracs(s) {
-  let safety = 50;
+  let safety = 1000;
   while (s.includes('\\frac') && safety-- > 0) {
     const idx = s.indexOf('\\frac');
     let i = idx + 5;
@@ -310,7 +338,7 @@ function convertFracs(s) {
 }
 
 function convertSqrts(s) {
-  let safety = 50;
+  let safety = 1000;
   while (/\\sqrt\[/.test(s) && safety-- > 0) {
     const m = s.match(/\\sqrt\[/);
     if (!m) break;
@@ -327,7 +355,7 @@ function convertSqrts(s) {
       s = s.slice(0, idx) + '((' + body + ')**(1/(' + n + ')))' + s.slice(braceEnd + 1);
     } else break;
   }
-  safety = 50;
+  safety = 1000;
   while (s.includes('\\sqrt{') && safety-- > 0) {
     const idx = s.indexOf('\\sqrt{');
     const braceEnd = matchBrace(s, idx + 5);
@@ -341,6 +369,8 @@ function convertSqrts(s) {
 function latexToExpr(tex) {
   let s = tex;
 
+  s = s.replace(/[−–—]/g, '-');
+  
   s = s.replace(/^\$\$?|\$\$?$/g, '').trim();
   s = s.replace(/^\\\[|\\\]$/g, '').trim();
   s = s.replace(/^\\\(|\\\)$/g, '').trim();
@@ -351,11 +381,13 @@ function latexToExpr(tex) {
   s = s.replace(/\{\\(?:rm|bf|it|cal|sf)\s+[^}]*\}/g, ' ');
   s = s.replace(/\\(?:rm|bf|it|cal|sf)\{[^}]*\}/g, ' ');
 
-  s = s.replace(/([\d.]+)\s*\\times\s*10\s*\^\{([^}]+)\}/g, (_, num, exp) => `${num} * 10**(${exp})`);
-  s = s.replace(/([\d.]+)\s*\\times\s*10\s*\^(-?\d+)/g, (_, num, exp) => `${num} * 10**(${exp})`);
+  s = s.replaceAll('\\times', ' * ');
+  s = s.replaceAll('\\cdot', ' * ');
+
+  s = s.replace(/([\d.]+)\s*\*\s*10\s*\^\{([^}]+)\}/g, (_, num, exp) => `${num} * 10**(${exp})`);
+  s = s.replace(/([\d.]+)\s*\*\s*10\s*\^(-?\d+)/g, (_, num, exp) => `${num} * 10**(${exp})`);
   s = s.replace(/([\d.]+)\s*\*\s*10\s*\*\*\s*\(([^)]+)\)/g, (_, num, exp) => `${num} * 10**(${exp})`);
 
-  // Fixed Safari lookbehind issue for standalone 'e'
   s = s.replace(/(^|[^a-zA-Z_])e\s*\^\{/g, '$1e_n^{');
   s = s.replace(/(^|[^a-zA-Z_])e\s*\^([^{])/g, '$1e_n^$2');
 
@@ -366,8 +398,6 @@ function latexToExpr(tex) {
   s = s.replaceAll('\\bigl(', '(').replaceAll('\\bigr)', ')');
   s = s.replaceAll('\\Bigl(', '(').replaceAll('\\Bigr)', ')');
 
-  s = s.replaceAll('\\times', ' * ');
-  s = s.replaceAll('\\cdot', ' * ');
   s = s.replaceAll('\\div', ' / ');
   s = s.replaceAll('\\pm', '+');
   s = s.replaceAll('\\mp', '-');
@@ -422,7 +452,7 @@ function latexToExpr(tex) {
   s = convertFracs(s);
   s = convertSqrts(s);
 
-  let safety = 50;
+  let safety = 1000;
   while (/\^\{/.test(s) && safety-- > 0) {
     const idx = s.indexOf('^{');
     const braceEnd = matchBrace(s, idx + 1);
@@ -433,7 +463,7 @@ function latexToExpr(tex) {
   s = s.replace(/\^([0-9])/g, '**$1');
   s = s.replace(/\^([a-zA-Z])/g, '**$1');
 
-  safety = 50;
+  safety = 1000;
   while (/_\{/.test(s) && safety-- > 0) {
     const idx = s.indexOf('_{');
     const braceEnd = matchBrace(s, idx + 1);
@@ -450,15 +480,23 @@ function latexToExpr(tex) {
   s = s.replace(/\{([^{}]*)\}/g, '($1)');
 
   s = s.replace(/([0-9)])(\s*)(?![eE][+\-]?\d)([a-zA-Z_ℏπα])/g, '$1 * $3');
-  s = s.replace(/([a-zA-Z_0-9)])(\s*)\(/g, '$1 * (');
+  
+  s = s.replace(/([a-zA-Z_][a-zA-Z0-9_]*|[0-9]*\.?[0-9]+(?:[eE][+-]?[0-9]+)?|\))(\s*)\(/g, (match, p1, p2) => {
+    if (MATH_FUNCS.has(p1)) return match;
+    return p1 + ' * (';
+  });
+
   let prevS;
   do { prevS = s; s = s.replace(/([a-zA-Z_][a-zA-Z0-9_]*)\s+([a-zA-Z_ℏπα][a-zA-Z0-9_]*)/g, '$1 * $2'); } while (s !== prevS);
   s = s.replace(/\)\s*([0-9])/g, ') * $1');
-  for (const fn of [...MATH_FUNCS, 'pi', 'ln']) {
+  
+  for (const fn of ['ln']) {
     s = s.replaceAll(fn + ' * (', fn + '(');
   }
 
   s = s.replace(/\s+/g, ' ').trim();
+  s = balanceParens(s);
+  
   return s;
 }
 
@@ -502,10 +540,10 @@ function evalExpr(expr, unitSys, varValues = {}) {
     const reps = buildReplacements(unitSys);
     const allReps = { ...reps, ...varValues };
     
-    // Safely replace variables and constants using word boundaries, avoiding lookbehinds (Safari fix)
-    s = s.replace(/[a-zA-Z_ℏπα][a-zA-Z0-9_]*/g, match => {
-      if (allReps.hasOwnProperty(match)) {
-        return `(${allReps[match]})`;
+    s = s.replace(/([0-9]*\.?[0-9]+[eE][+-]?[0-9]+)|([a-zA-Z_ℏπα][a-zA-Z0-9_]*)/g, (match, isNum, isVar) => {
+      if (isNum) return match; 
+      if (isVar && allReps.hasOwnProperty(isVar)) {
+        return `(${allReps[isVar]})`;
       }
       return match;
     });
@@ -518,6 +556,10 @@ function evalExpr(expr, unitSys, varValues = {}) {
     s = s.replaceAll('π', `(${Math.PI})`);
     s = s.replace(/\bpi\b/g, `(${Math.PI})`);
     s = s.replaceAll('^', '**');
+    
+    s = s.replace(/\*\*\s*-\s*([a-zA-Z0-9_.]+)/g, '**(-$1)');
+    s = s.replace(/\*\*\s*\+\s*([a-zA-Z0-9_.]+)/g, '**($1)');
+
     s = s.replaceAll('×', '*');
     
     for (const fn of ['sqrt','cbrt','exp','log','abs','pow','sin','cos','tan','asin','acos','atan','floor','ceil','round','max','min']) {
@@ -526,12 +568,15 @@ function evalExpr(expr, unitSys, varValues = {}) {
     s = s.replace(/\bln\(/g, 'Math.log(');
     
     s = s.replaceAll('Math.Math.', 'Math.');
+    s = balanceParens(s);
+    
     const result = Function('"use strict"; return (' + s + ')')();
     
-    // Allow Infinity to be returned so the user sees computation exploded instead of silent failure
     if (typeof result === 'number' && !isNaN(result)) return result;
     return null;
-  } catch { return null; }
+  } catch(err) { 
+    return null; 
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -552,11 +597,11 @@ function LatexRenderer({ tex, displayMode = false, style, katexReady }) {
         containerRef.current.textContent = tex;
       }
     } else if (containerRef.current && !katexReady) {
-      containerRef.current.textContent = tex; // Fallback text while loading
+      containerRef.current.textContent = tex;
     }
   }, [tex, katexReady, displayMode]);
 
-  return React.createElement('span', { ref: containerRef, style: { ...style, fontFamily: katexReady ? undefined : monoFont } });
+  return <span ref={containerRef} style={{ ...style, fontFamily: katexReady ? undefined : monoFont }} />;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -621,81 +666,12 @@ function Chip({ active, label, onClick, accent }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  UNIT CONVERTER
-// ═══════════════════════════════════════════════════════════════
-function UnitConverter() {
-  const [mode, setMode] = useState("energy");
-  const [inputVal, setInputVal] = useState(1);
-  const [inputExp, setInputExp] = useState(0);
-  const val = inputVal * Math.pow(10, inputExp);
-  const conversions = useMemo(() => {
-    switch (mode) {
-      case "energy": { const J=val*eVtoJ; return [
-        { label:"eV",val },{ label:"meV",value:val*1e3 },{ label:"keV",value:val*1e-3 },
-        { label:"MeV",value:val*1e-6 },{ label:"GeV",value:val*1e-9 },{ label:"J",value:J },
-        { label:"kJ/mol",value:J*6.0221413e23/1000 },{ label:"cm⁻¹",value:val/(1239.8419e-7) },
-        { label:"K",value:val/8.617332e-5 },{ label:"Hz",value:val/4.13566752e-15 },
-      ]; }
-      case "energy_J": { const ev=val/eVtoJ; return [
-        { label:"J",value:val },{ label:"eV",value:ev },{ label:"meV",value:ev*1e3 },
-        { label:"keV",value:ev*1e-3 },{ label:"MeV",value:ev*1e-6 },{ label:"GeV",value:ev*1e-9 },
-        { label:"kJ/mol",value:val*6.0221413e23/1000 },{ label:"cm⁻¹",value:ev/(1239.8419e-7) },
-        { label:"K",value:ev/8.617332e-5 },{ label:"Hz",value:ev/4.13566752e-15 },
-      ]; }
-      case "length": return [
-        { label:"m",value:val },{ label:"nm",value:val*1e9 },{ label:"Å",value:val*1e10 },
-        { label:"pm",value:val*1e12 },{ label:"fm",value:val*1e15 },{ label:"μm",value:val*1e6 },
-        { label:"mm",value:val*1e3 },{ label:"cm",value:val*1e2 },{ label:"a₀",value:val/5.291772109e-11 },
-      ];
-      case "mass": return [
-        { label:"kg",value:val },{ label:"g",value:val*1e3 },{ label:"u",value:val/1.66053892e-27 },
-        { label:"MeV/c²",value:(val/1.66053892e-27)*931.49406 },{ label:"mₑ",value:val/9.1093829e-31 },
-      ];
-      case "temperature": return [
-        { label:"K",value:val },{ label:"°C",value:val-273.15 },{ label:"°F",value:(val-273.15)*9/5+32 },
-        { label:"kT (eV)",value:8.617332e-5*val },{ label:"kT (J)",value:1.380649e-23*val },
-      ];
-      default: return [];
-    }
-  }, [mode, val]);
-
-  const tSt = (a) => ({ background:mode===a?"rgba(40,80,140,0.5)":"transparent", border:mode===a?"1px solid rgba(100,160,255,0.4)":"1px solid rgba(60,80,120,0.15)", borderRadius:6, padding:"6px 12px", cursor:"pointer", color:mode===a?"#a0ccff":"#5577aa", fontSize:12, fontWeight:600 });
-  return (
-    <div>
-      <div style={{ display:"flex", gap:6, marginBottom:12, flexWrap:"wrap" }}>
-        {[["energy","Energy (eV)"],["energy_J","Energy (J)"],["length","Length (m)"],["mass","Mass (kg)"],["temperature","Temp (K)"]].map(([m,l]) =>
-          <button key={m} onClick={() => setMode(m)} style={tSt(m)}>{l}</button>
-        )}
-      </div>
-      <div style={{ background:cardBg, borderRadius:8, border:cardBorder, padding:14, marginBottom:12 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-          <label style={{ color:"#8899bb", fontSize:12 }}>Value:</label>
-          <input type="number" step="any" value={inputVal} onChange={(e) => setInputVal(parseFloat(e.target.value)||0)} style={{width:120,...inputStyle,fontSize:14}} />
-          <span style={{ color:"#5577aa", fontSize:13 }}>×10^</span>
-          <input type="number" value={inputExp} onChange={(e) => setInputExp(parseInt(e.target.value)||0)} style={{width:60,...inputStyle,fontSize:14}} />
-        </div>
-        <div style={{ color:"#4a6a90", fontSize:11, marginTop:6, fontFamily:monoFont }}>= {fmt(val)}</div>
-      </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))", gap:6 }}>
-        {conversions.map(c => (
-          <div key={c.label} style={{ background:cardBg, borderRadius:6, border:"1px solid rgba(60,90,140,0.15)", padding:"8px 10px" }}>
-            <div style={{ color:"#5a8abb", fontSize:11, marginBottom:2 }}>{c.label}</div>
-            <div style={{ color:"#c8daf0", fontSize:13, fontFamily:monoFont, fontWeight:500 }}>{fmt(c.value ?? c.val)}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
 //  MAIN APP
 // ═══════════════════════════════════════════════════════════════
 function App() {
   const [tab, setTab] = useState("expr");
   const [katexReady, setKatexReady] = useState(false);
   
-  // Load KaTeX dynamically
   useEffect(() => {
     if (window.katex) { setKatexReady(true); return; }
     if (document.querySelector('#katex-script')) {
@@ -715,19 +691,40 @@ function App() {
     document.head.appendChild(script);
   }, []);
 
-  // Expr tab state
   const [expr, setExpr] = useState("");
   const [exprResult, setExprResult] = useState(null);
-  const [unitSys, setUnitSys] = useState("ev");
+  const [unitSys, setUnitSys] = useState("si"); 
   const [resultDim, setResultDim] = useState("energy");
   const [varValues, setVarValues] = useState({});
+  const [varMultipliers, setVarMultipliers] = useState({});
+  
   const [parsed, setParsed] = useState(null);
   const [convertedExpr, setConvertedExpr] = useState(null);
   const [latexLines, setLatexLines] = useState([]);
   const [selectedLineIdx, setSelectedLineIdx] = useState(-1);
   const [displayLhs, setDisplayLhs] = useState("");
-  
-  // Formula tab
+
+  const getPresetForVar = useCallback((name) => {
+    if (!name) return null;
+    const norm = name.replace(/\\/g, '').replace(/[{}]/g, '').trim();
+    if (norm === 'E_F') return EXPR_PRESETS.find(p => p.label.includes("Fermi Energy"));
+    if (norm === 'lambda' || norm === 'lamda') return EXPR_PRESETS.find(p => p.label.includes("de Broglie Wavelength (by p)"));
+    if (norm === 'p') return EXPR_PRESETS.find(p => p.label.includes("Momentum p"));
+    if (norm === 'N') return EXPR_PRESETS.find(p => p.label.includes("Total Neutron Number"));
+    if (norm === 'V') return EXPR_PRESETS.find(p => p.label.includes("Volume of Sphere"));
+    if (norm === 'R') return EXPR_PRESETS.find(p => p.label.includes("Neutron Star Radius"));
+    
+    if (norm === 'E_n') return EXPR_PRESETS.find(p => p.label.includes("Bohr Energy"));
+    if (norm === 'd') return EXPR_PRESETS.find(p => p.label.includes("Avg Particle Distance"));
+    if (norm === 'mu') return EXPR_PRESETS.find(p => p.label.includes("Reduced Mass"));
+    if (norm === 'E_L') return EXPR_PRESETS.find(p => p.label.includes("Rotational Energy"));
+    if (norm === 'I') return EXPR_PRESETS.find(p => p.label.includes("Moment of Inertia"));
+    if (norm === 'omega') return EXPR_PRESETS.find(p => p.label.includes("Vibrational Angular Freq"));
+    return null;
+  }, []);
+
+  const topPreset = useMemo(() => getPresetForVar(displayLhs), [displayLhs, getPresetForVar]);
+
   const [selectedFormula, setSelectedFormula] = useState(FORMULAS[0].id);
   const [formulaParams, setFormulaParams] = useState(() => {
     const i = {}; FORMULAS.forEach(f => { i[f.id] = {}; f.params.forEach(p => { i[f.id][p.key] = p.default; }); }); return i;
@@ -735,6 +732,13 @@ function App() {
   const [constFilter, setConstFilter] = useState("");
   const inputRef = useRef(null);
 
+  const formula = useMemo(() => FORMULAS.find(f => f.id === selectedFormula), [selectedFormula]);
+  const formulaResult = useMemo(() => {
+    if (!formula) return null;
+    return formula.calc(formulaParams[formula.id] || {});
+  }, [formula, formulaParams, selectedFormula]);
+
+  // 1. Top-level Parsing
   useEffect(() => {
     if (!expr.trim()) {
       setParsed(null); setConvertedExpr(null); setLatexLines([]); setSelectedLineIdx(-1); setDisplayLhs("");
@@ -797,11 +801,96 @@ function App() {
     }
   }, [expr]);
 
-  const formula = FORMULAS.find(f => f.id === selectedFormula);
-  const formulaResult = useMemo(() => {
-    if (!formula) return null;
-    try { return formula.calc(formulaParams[formula.id]); } catch { return null; }
-  }, [formula, formulaParams]);
+  // 2. Build Dependency Tree & Evaluate Recursively
+  const { displayList, evaluatedVars, finalResult } = useMemo(() => {
+    if (!parsed || !parsed.vars) return { displayList: [], evaluatedVars: {}, finalResult: null };
+
+    const list = [];
+    const visitedUI = new Set();
+    
+    const buildUI = (vName, depth) => {
+        if (visitedUI.has(vName)) return;
+        visitedUI.add(vName);
+
+        const rawInput = varValues[vName] || "";
+        let cleanRaw = rawInput;
+        if (cleanRaw.startsWith(vName + '=') || cleanRaw.startsWith(vName + ' =')) {
+            cleanRaw = cleanRaw.substring(cleanRaw.indexOf('=')+1).trim();
+        }
+
+        const processedRaw = latexToExpr(cleanRaw);
+        const tokens = parseExprTokens(processedRaw);
+
+        list.push({
+            name: vName,
+            depth,
+            tokens,
+            previewTex: isLatex(cleanRaw) ? cleanRaw : null,
+            cleanRaw,
+            processedRaw
+        });
+
+        tokens.vars.forEach(dep => buildUI(dep, depth + 1));
+    };
+
+    parsed.vars.forEach(v => buildUI(v, 0));
+
+    const evaluated = {};
+    const evaluating = new Set();
+
+    const evaluateVar = (vName) => {
+        if (evaluated[vName] !== undefined) return evaluated[vName];
+        if (evaluating.has(vName)) return null; 
+        evaluating.add(vName);
+
+        const item = list.find(x => x.name === vName);
+        if (!item || !item.cleanRaw.trim()) {
+            evaluated[vName] = null;
+            return null;
+        }
+
+        const depValues = {};
+        let depsValid = true;
+        for (const dep of item.tokens.vars) {
+            const dVal = evaluateVar(dep);
+            if (dVal === null || isNaN(dVal)) depsValid = false;
+            depValues[dep] = dVal;
+        }
+
+        let val = null;
+        if (depsValid || Object.keys(depValues).length === item.tokens.vars.length) {
+            val = evalExpr(item.processedRaw, unitSys, depValues);
+            if (val !== null && varMultipliers[vName]) {
+                val *= varMultipliers[vName];
+            }
+        }
+
+        evaluated[vName] = val;
+        evaluating.delete(vName);
+        return val;
+    };
+
+    const mainDepValues = {};
+    let isMainValid = true;
+    parsed.vars.forEach(v => {
+        const val = evaluateVar(v);
+        if (val === null || isNaN(val)) isMainValid = false;
+        mainDepValues[v] = val;
+    });
+
+    let mainRes = null;
+    const finalExprTarget = convertedExpr || (displayLhs ? expr.substring(expr.indexOf('=')+1) : expr);
+    if (isMainValid && finalExprTarget) {
+        mainRes = evalExpr(finalExprTarget, unitSys, mainDepValues);
+    }
+
+    return { displayList: list, evaluatedVars: evaluated, finalResult: mainRes };
+
+  }, [parsed, varValues, varMultipliers, unitSys, convertedExpr, expr, displayLhs]);
+
+  useEffect(() => {
+    setExprResult(finalResult);
+  }, [finalResult]);
 
   const handleConstInsert = useCallback((insertKey) => {
     setExpr(prev => prev + insertKey);
@@ -822,24 +911,9 @@ function App() {
         p.vars.forEach(v => { next[v] = prev[v] || ""; });
         return next;
       });
+      setVarMultipliers({});
     }
   }, [latexLines]);
-
-  const handleEval = useCallback(() => {
-    const numVars = {};
-    if (parsed) {
-      for (const v of parsed.vars) {
-        const raw = (varValues[v] || "").trim();
-        if (!raw) { setExprResult(null); return; }
-        try {
-          const val = Function('"use strict"; return (' + raw.replace(/\^/g, '**') + ')')();
-          if (typeof val !== 'number' || isNaN(val)) { setExprResult(null); return; }
-          numVars[v] = val;
-        } catch { setExprResult(null); return; }
-      }
-    }
-    setExprResult(evalExpr(convertedExpr || (displayLhs ? expr.substring(expr.indexOf('=')+1) : expr), unitSys, numVars));
-  }, [expr, convertedExpr, unitSys, parsed, varValues, displayLhs]);
 
   const exprConversions = useMemo(() => {
     if (exprResult === null || !isFinite(exprResult)) return [];
@@ -999,8 +1073,8 @@ function App() {
               <div>
                 <div style={{ ...secTitle, marginBottom: 6 }}>Unit System</div>
                 <div style={{ display: "flex", gap: 4 }}>
-                  <Chip active={unitSys==="ev"} label="eV System" onClick={() => { setUnitSys("ev"); setExprResult(null); }} accent="green" />
-                  <Chip active={unitSys==="si"} label="SI System" onClick={() => { setUnitSys("si"); setExprResult(null); }} />
+                  <Chip active={unitSys==="ev"} label="eV System" onClick={() => setUnitSys("ev")} accent="green" />
+                  <Chip active={unitSys==="si"} label="SI System" onClick={() => setUnitSys("si")} />
                 </div>
               </div>
               <div>
@@ -1016,12 +1090,23 @@ function App() {
               <div style={{ ...secTitle, marginBottom: 6 }}>Preset Expressions (Optional)</div>
               <select
                 value=""
-                onChange={(ev) => { if (ev.target.value) { setExpr(ev.target.value); setExprResult(null); setVarValues({}); } }}
+                onChange={(ev) => { 
+                  if (ev.target.value !== "") { 
+                    const sel = EXPR_PRESETS[parseInt(ev.target.value)];
+                    setExpr(sel.expr); 
+                    setVarValues(sel.varValues || {}); 
+                    setVarMultipliers({}); 
+                  } else {
+                    setExpr("");
+                    setVarValues({});
+                    setVarMultipliers({});
+                  }
+                }}
                 style={{ width: "100%", maxWidth: 500 }}
               >
                 <option value="">-- Select a preset --</option>
                 {EXPR_PRESETS.map((p, i) => (
-                  <option key={i} value={p.expr}>{p.label} — {p.expr}</option>
+                  <option key={i} value={i}>{p.label} — {p.expr}</option>
                 ))}
               </select>
             </div>
@@ -1033,7 +1118,7 @@ function App() {
               borderRadius: 6, padding: "8px 12px", marginBottom: 12, fontSize: 11, color: "#8899bb", lineHeight: 1.6,
             }}>
               {unitSys==="ev" ? (<>
-                <strong style={{ color: "#7ecc8f" }}>eV System</strong> — k_B→8.617×10⁻⁵ eV/K | ℏ→6.582×10⁻¹⁶ eV·s | m_e→0.511 MeV/c² | hc→1239.84 eV·nm | eV=1
+                <strong style={{ color: "#7ecc8f" }}>eV System Note:</strong> Mass constants are precisely applied in <strong>eV/c²</strong> ($m_e \approx 5.11 \times 10^5$). When calculating energy, using $\hbar c$ or $hc$ (eV·nm) rather than $h$ (eV·s) aligns lengths perfectly in nm.
               </>) : (<>
                 <strong style={{ color: "#7eb8ff" }}>SI System</strong> — k_B→1.381×10⁻²³ J/K | ℏ→1.055×10⁻³⁴ J·s | m_e→9.109×10⁻³¹ kg | eV→1.602×10⁻¹⁹ (Conversion factor)
               </>)}
@@ -1042,22 +1127,30 @@ function App() {
             {/* ── Expression input ── */}
             <div style={{ background: cardBg, borderRadius: 8, border: cardBorder, padding: 14, marginBottom: 12 }}>
               <div style={{ ...secTitle, marginTop: 0, marginBottom: 8 }}>Expression Input <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, color: "#5a7a9a" }}>— Normal expression, LaTeX, or align block</span></div>
+              
+              {/* 스마트 프리셋 제안 (메인) */}
+              {topPreset && (!expr.includes(topPreset.expr)) && (
+                <div style={{ background: "rgba(160,120,60,0.15)", border: "1px solid rgba(180,140,60,0.4)", borderRadius: 6, padding: "8px 12px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ color: "#ddbb66", fontSize: 12 }}>
+                    💡 Found matching preset: <strong>'{topPreset.label}'</strong>
+                  </div>
+                  <button onClick={() => { setExpr(displayLhs ? displayLhs + " = " + topPreset.expr : topPreset.expr); setVarValues(topPreset.varValues || {}); setVarMultipliers({}); }} style={{ background: "rgba(180,140,60,0.3)", border: "1px solid rgba(200,160,80,0.4)", borderRadius: 4, padding: "4px 8px", color: "#eedd99", fontSize: 11, cursor: "pointer" }}>
+                    Load Preset
+                  </button>
+                </div>
+              )}
+
               <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "flex-start" }}>
                 <textarea ref={inputRef} value={expr}
-                  onChange={(e) => { setExpr(e.target.value); setExprResult(null); }}
-                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !expr.includes('\n')) { e.preventDefault(); handleEval(); } }}
-                  placeholder={"e.g.: k_B * T\nOr: \\frac{\\hbar^{2}}{2 m_e} (3\\pi^{2} n)^{2/3}\nOr: paste \\begin{align*} ... \\end{align*} block"}
+                  onChange={(e) => setExpr(e.target.value)}
+                  placeholder={"e.g.: E_F = \\frac{\\hbar^{2}}{2 m_e} (3\\pi^{2} n)^{2/3}\nOr paste complex equation block"}
                   rows={expr.includes('\n') || expr.includes('\\begin') ? 6 : 2}
                   style={{ flex: 1, ...inputStyle, borderRadius: 6, padding: "8px 12px", fontSize: 13, resize: "vertical", lineHeight: 1.5, minHeight: 38 }} />
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <button onClick={handleEval} style={{
-                    background: "linear-gradient(135deg, #1a4a8a, #2a60a0)", border: "1px solid rgba(100,160,255,0.3)",
-                    borderRadius: 6, padding: "8px 16px", color: "#c0ddff", fontSize: 13, fontWeight: 600, cursor: "pointer",
-                  }}>Eval</button>
-                  <button onClick={() => { setExpr(""); setExprResult(null); setVarValues({}); setParsed(null); setConvertedExpr(null); setLatexLines([]); setSelectedLineIdx(-1); setDisplayLhs(""); }} style={{
+                  <button onClick={() => { setExpr(""); setVarValues({}); setVarMultipliers({}); }} style={{
                     background: "rgba(60,30,30,0.4)", border: "1px solid rgba(200,100,100,0.2)",
                     borderRadius: 6, padding: "8px 12px", color: "#cc8888", fontSize: 13, cursor: "pointer",
-                  }}>C</button>
+                  }}>Clear</button>
                 </div>
               </div>
 
@@ -1066,12 +1159,7 @@ function App() {
                 <div style={{ background: "rgba(20,30,40,0.6)", padding: "10px 14px", borderRadius: 6, marginTop: 10, border: "1px solid rgba(100,140,200,0.2)", overflowX: "auto" }}>
                   <div style={{ fontSize: 10, color: "#8899bb", marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>Live LaTeX Preview</div>
                   <div style={{ color: "#e0ecff", paddingBottom: 4 }}>
-                    {/* align* is substituted with aligned for KaTeX compatibility */}
-                    <LatexRenderer 
-                      tex={expr.replace(/align\*/g, 'aligned')} 
-                      displayMode={true} 
-                      katexReady={katexReady} 
-                    />
+                    <LatexRenderer tex={expr.replace(/align\*/g, 'aligned')} displayMode={true} katexReady={katexReady} />
                   </div>
                 </div>
               )}
@@ -1149,29 +1237,78 @@ function App() {
                 </div>
               )}
 
-              {/* ── Auto-detected: variables (user input fields) ── */}
-              {parsed && parsed.vars.length > 0 && (
+              {/* ── Auto-detected: Hierarchical variables ── */}
+              {displayList.length > 0 && (
                 <div style={{ background: "rgba(50,40,20,0.3)", borderRadius: 6, border: "1px solid rgba(180,140,60,0.2)", padding: "10px 10px", marginBottom: 10 }}>
-                  <div style={{ color: "#ccaa55", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Variables (Unknowns)</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {parsed.vars.map(v => (
-                      <div key={v} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <label style={{ color: "#ddbb66", fontSize: 13, fontWeight: 600, fontFamily: monoFont, minWidth: 100, textAlign: "right" }}>{v} =</label>
-                        <input
-                          type="text"
-                          value={varValues[v] || ""}
-                          onChange={(ev) => setVarValues(prev => ({ ...prev, [v]: ev.target.value }))}
-                          onKeyDown={(e) => { if (e.key === "Enter") handleEval(); }}
-                          placeholder="e.g., 293, 1e28, 10**28, 1.5"
-                          style={{ flex: 1, ...inputStyle, borderRadius: 6, padding: "6px 10px", borderColor: "rgba(180,140,60,0.3)" }}
-                        />
-                      </div>
-                    ))}
+                  <div style={{ color: "#ccaa55", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Variables (Auto-detects nested variables)</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {displayList.map(item => {
+                      const evaluatedVal = evaluatedVars[item.name];
+                      const isValid = evaluatedVal !== null && typeof evaluatedVal === 'number' && !isNaN(evaluatedVal) && isFinite(evaluatedVal);
+                      const indent = Math.min(item.depth * 24, 140);
+                      const activeMultiplier = varMultipliers[item.name] || 1;
+                      
+                      const varPreset = getPresetForVar(item.name);
+                      const showVarPreset = varPreset && !(varValues[item.name] && varValues[item.name].includes(varPreset.expr));
+
+                      return (
+                        <div key={item.name} style={{ display: "flex", flexDirection: "column", gap: 4, marginLeft: indent, borderLeft: item.depth > 0 ? "2px solid rgba(180,140,60,0.4)" : "none", paddingLeft: item.depth > 0 ? 12 : 0, marginTop: item.depth > 0 ? 6 : 0 }}>
+                          
+                          {showVarPreset && (
+                            <div style={{ background: "rgba(160,120,60,0.15)", border: "1px solid rgba(180,140,60,0.3)", borderRadius: 6, padding: "6px 10px", marginBottom: 4, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <div style={{ color: "#ddbb66", fontSize: 11 }}>
+                                💡 Suggested Preset: <strong>{varPreset.label}</strong>
+                              </div>
+                              <button onClick={() => { setVarValues(prev => ({ ...prev, [item.name]: varPreset.expr, ...(varPreset.varValues || {}) })); }} style={{ background: "rgba(180,140,60,0.3)", border: "1px solid rgba(200,160,80,0.3)", borderRadius: 4, padding: "3px 8px", color: "#eedd99", fontSize: 11, cursor: "pointer" }}>
+                                Apply
+                              </button>
+                            </div>
+                          )}
+
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            <label style={{ color: "#ddbb66", fontSize: 13, fontWeight: 600, fontFamily: monoFont, minWidth: 40, textAlign: "right" }}>
+                              <LatexRenderer tex={item.name} katexReady={katexReady} displayMode={false} /> =
+                            </label>
+                            <input
+                              type="text"
+                              value={varValues[item.name] || ""}
+                              onChange={(ev) => setVarValues(prev => ({ ...prev, [item.name]: ev.target.value }))}
+                              placeholder="Input constant or expression (LaTeX supported)"
+                              style={{ flex: 1, minWidth: 180, ...inputStyle, borderRadius: 6, padding: "6px 10px", borderColor: "rgba(180,140,60,0.3)" }}
+                            />
+                            <select 
+                              value={activeMultiplier} 
+                              onChange={(ev) => setVarMultipliers(prev => ({ ...prev, [item.name]: parseFloat(ev.target.value) }))}
+                              style={{ background: "rgba(30,20,10,0.5)", border: "1px solid rgba(180,140,60,0.3)", color: "#cca060", borderRadius: 6, padding: "5px 8px", fontSize: 11, fontFamily: monoFont, minWidth: 140 }}
+                            >
+                              {MAGNITUDES.map(mag => (
+                                <option key={mag.label} value={mag.val}>{mag.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                          {(item.previewTex || isValid) && (
+                            <div style={{ paddingLeft: 68, display: "flex", flexDirection: "column", gap: 4 }}>
+                              {item.previewTex && (
+                                <div style={{ color: "#c8b0ee", fontSize: 12, overflowX: "auto" }}>
+                                  <LatexRenderer tex={item.previewTex} katexReady={katexReady} displayMode={false} />
+                                </div>
+                              )}
+                              {isValid && (
+                                <div style={{ color: "#8899aa", fontSize: 11, fontFamily: monoFont }}>
+                                  {item.previewTex ? "↳ " : "= "}{fmt(evaluatedVal)}
+                                  {activeMultiplier !== 1 && <span style={{color: "#bba866"}}> (Prefix applied)</span>}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
-              {parsed && parsed.vars.length === 0 && expr.trim() && (
+              {displayList.length === 0 && expr.trim() && (
                 <div style={{ color: "#5577aa", fontSize: 11, marginBottom: 6 }}>All tokens are built-in constants — Ready to evaluate</div>
               )}
 
@@ -1229,11 +1366,11 @@ function App() {
             {/* ── Help ── */}
             <div style={{ background: "rgba(15,25,45,0.3)", borderRadius: 6, padding: 10, border: "1px solid rgba(60,90,140,0.15)" }}>
               <div style={{ color: "#4a6a90", fontSize: 11, lineHeight: 1.8 }}>
-                <strong style={{ color: "#5a8abb" }}>Workflow:</strong> ① Select unit system → ② Input expression (Normal/LaTeX/align) → ③ Enter variables → ④ Press Enter<br/>
+                <strong style={{ color: "#5a8abb" }}>Workflow:</strong> ① Select unit system → ② Input expression (Normal/LaTeX/align) → ③ Enter variables → ④ Auto calculation<br/>
                 <strong style={{ color: "#5a8abb" }}>Operators:</strong> + - * / ^(exponent) sqrt() cbrt() exp() ln() sin() cos() tan() π<br/>
                 <strong style={{ color: "#5a8abb" }}>Euler's Number:</strong> e_n (= 2.71828...) — e.g., e_n**(-lambda * t)<br/>
                 <strong style={{ color: "#b090dd" }}>LaTeX:</strong> \frac, \sqrt, \sqrt[n], \hbar, \pi, ^{'{}'}, _{'{}'}, \times, \cdot, \left/\right<br/>
-                <strong style={{ color: "#aacc55" }}>Multi-line:</strong> Paste \begin{'{'}align*{'}'}{'{'}...{'}'} block → Parsed line by line → Select a line → Enter variables → Evaluate<br/>
+                <strong style={{ color: "#aacc55" }}>Multi-line:</strong> Paste \begin{'{'}align*{'}'}... block → Parsed line by line → Select a line → Enter variables → Auto calculation<br/>
                 <strong style={{ color: "#e86a6a" }}>Caution:</strong> According to programming rules, <code style={{background:"rgba(200,50,50,0.2)", padding:"2px 4px", borderRadius:4}}>a/b*c</code> is evaluated as <code style={{color:"#ff9999"}}>(a/b)*c</code>. <strong>To group the denominator, you MUST use parentheses like <code style={{background:"rgba(50,200,50,0.2)", color:"#99ff99", padding:"2px 4px", borderRadius:4}}>a/(b*c)</code>!</strong>
               </div>
             </div>
@@ -1248,9 +1385,74 @@ function App() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  RENDER
+//  UNIT CONVERTER
 // ═══════════════════════════════════════════════════════════════
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+function UnitConverter() {
+  const [mode, setMode] = useState("energy");
+  const [inputVal, setInputVal] = useState(1);
+  const [inputExp, setInputExp] = useState(0);
+  const val = inputVal * Math.pow(10, inputExp);
+  const conversions = useMemo(() => {
+    switch (mode) {
+      case "energy": { const J=val*eVtoJ; return [
+        { label:"eV",val },{ label:"meV",value:val*1e3 },{ label:"keV",value:val*1e-3 },
+        { label:"MeV",value:val*1e-6 },{ label:"GeV",value:val*1e-9 },{ label:"J",value:J },
+        { label:"kJ/mol",value:J*6.0221413e23/1000 },{ label:"cm⁻¹",value:val/(1239.8419e-7) },
+        { label:"K",value:val/8.617332e-5 },{ label:"Hz",value:val/4.13566752e-15 },
+      ]; }
+      case "energy_J": { const ev=val/eVtoJ; return [
+        { label:"J",value:val },{ label:"eV",value:ev },{ label:"meV",value:ev*1e3 },
+        { label:"keV",value:ev*1e-3 },{ label:"MeV",value:ev*1e-6 },{ label:"GeV",value:ev*1e-9 },
+        { label:"kJ/mol",value:val*6.0221413e23/1000 },{ label:"cm⁻¹",value:ev/(1239.8419e-7) },
+        { label:"K",value:ev/8.617332e-5 },{ label:"Hz",value:ev/4.13566752e-15 },
+      ]; }
+      case "length": return [
+        { label:"m",value:val },{ label:"nm",value:val*1e9 },{ label:"Å",value:val*1e10 },
+        { label:"pm",value:val*1e12 },{ label:"fm",value:val*1e15 },{ label:"μm",value:val*1e6 },
+        { label:"mm",value:val*1e3 },{ label:"cm",value:val*1e2 },{ label:"a₀",value:val/5.291772109e-11 },
+      ];
+      case "mass": return [
+        { label:"kg",value:val },{ label:"g",value:val*1e3 },{ label:"u",value:val/1.66053892e-27 },
+        { label:"MeV/c²",value:(val/1.66053892e-27)*931.49406 },{ label:"mₑ",value:val/9.1093829e-31 },
+      ];
+      case "temperature": return [
+        { label:"K",value:val },{ label:"°C",value:val-273.15 },{ label:"°F",value:(val-273.15)*9/5+32 },
+        { label:"kT (eV)",value:8.617332e-5*val },{ label:"kT (J)",value:1.380649e-23*val },
+      ];
+      default: return [];
+    }
+  }, [mode, val]);
+
+  const tSt = (a) => ({ background:mode===a?"rgba(40,80,140,0.5)":"transparent", border:mode===a?"1px solid rgba(100,160,255,0.4)":"1px solid rgba(60,80,120,0.15)", borderRadius:6, padding:"6px 12px", cursor:"pointer", color:mode===a?"#a0ccff":"#5577aa", fontSize:12, fontWeight:600 });
+  return (
+    <div>
+      <div style={{ display:"flex", gap:6, marginBottom:12, flexWrap:"wrap" }}>
+        {[["energy","Energy (eV)"],["energy_J","Energy (J)"],["length","Length (m)"],["mass","Mass (kg)"],["temperature","Temp (K)"]].map(([m,l]) =>
+          <button key={m} onClick={() => setMode(m)} style={tSt(m)}>{l}</button>
+        )}
+      </div>
+      <div style={{ background:cardBg, borderRadius:8, border:cardBorder, padding:14, marginBottom:12 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <label style={{ color:"#8899bb", fontSize:12 }}>Value:</label>
+          <input type="number" step="any" value={inputVal} onChange={(e) => setInputVal(parseFloat(e.target.value)||0)} style={{width:120,...inputStyle,fontSize:14}} />
+          <span style={{ color:"#5577aa", fontSize:13 }}>×10^</span>
+          <input type="number" value={inputExp} onChange={(e) => setInputExp(parseInt(e.target.value)||0)} style={{width:60,...inputStyle,fontSize:14}} />
+        </div>
+        <div style={{ color:"#4a6a90", fontSize:11, marginTop:6, fontFamily:monoFont }}>= {fmt(val)}</div>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))", gap:6 }}>
+        {conversions.map(c => (
+          <div key={c.label} style={{ background:cardBg, borderRadius:6, border:"1px solid rgba(60,90,140,0.15)", padding:"8px 10px" }}>
+            <div style={{ color:"#5a8abb", fontSize:11, marginBottom:2 }}>{c.label}</div>
+            <div style={{ color:"#c8daf0", fontSize:13, fontFamily:monoFont, fontWeight:500 }}>{fmt(c.value ?? c.val)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
