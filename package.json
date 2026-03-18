@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "mathjs": "^15.1.1",
+    "nerdamer": "^1.1.13"
+  }
+}
