@@ -31,9 +31,6 @@ function formatReadableSci(val) {
 // cos(pi/3)≈0.4999999999999994 is displayed as 0.5 by fmt()
 function cleanFloat(val) {
   if (!isFinite(val) || val === 0) return val;
-  const abs = Math.abs(val);
-  // Absolute near-zero: catches sin(nπ), cos(π/2), etc.
-  if (abs < 5e-15) return 0;
   // Relative near-integer: catches cos(2π)≈0.9999999999999998 → 1
   const rounded = Math.round(val);
   if (rounded !== 0 && Math.abs(val - rounded) / Math.abs(rounded) < 1e-14) return rounded;
