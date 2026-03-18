@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-//  UTILITIES & EVALUATOR
+//  UTILITIES & EVALUATOR (math.js CAS backend)
 // ═══════════════════════════════════════════════════════════════
 function fmt(val, sig = 8) {
   if (typeof val !== 'number' || isNaN(val)) return "Error";
@@ -26,46 +26,64 @@ function formatReadableSci(val) {
   return `${mantissa.toFixed(2)} × 10${toSuperscript(exp)}`;
 }
 
+// ── Floating-point epsilon cleanup ──
+// Catches artifacts like sin(pi)≈1.22e-16 → 0,
+// cos(pi/3)≈0.4999999999999994 is displayed as 0.5 by fmt()
+function cleanFloat(val) {
+  if (!isFinite(val) || val === 0) return val;
+  const abs = Math.abs(val);
+  // Absolute near-zero: catches sin(nπ), cos(π/2), etc.
+  if (abs < 5e-15) return 0;
+  // Relative near-integer: catches cos(2π)≈0.9999999999999998 → 1
+  const rounded = Math.round(val);
+  if (rounded !== 0 && Math.abs(val - rounded) / Math.abs(rounded) < 1e-14) return rounded;
+  return val;
+}
+
+// ── Expression evaluator using math.js ──
 function evalExpr(expr, unitSys, varValues = {}) {
   try {
     let s = expr;
-    const reps = buildReplacements(unitSys);
-    const allReps = { ...reps, ...varValues };
 
-    s = s.replace(/([0-9]*\.?[0-9]+[eE][+-]?[0-9]+)|([a-zA-Z_ℏπα][a-zA-Z0-9_]*)/g, (match, isNum, isVar) => {
-      if (isNum) return match;
-      if (isVar && allReps.hasOwnProperty(isVar)) {
-        return `(${allReps[isVar]})`;
-      }
-      return match;
-    });
-
-    s = s.replace(/\bMeV\b/g, `(${unitSys === "si" ? 1e6*eVtoJ : 1e6})`);
-    s = s.replace(/\bkeV\b/g, `(${unitSys === "si" ? 1e3*eVtoJ : 1e3})`);
-    s = s.replace(/\bGeV\b/g, `(${unitSys === "si" ? 1e9*eVtoJ : 1e9})`);
-    s = s.replace(/\beV\b/g,  `(${unitSys === "si" ? eVtoJ : 1})`);
-
-    s = s.replaceAll('π', `(${Math.PI})`);
-    s = s.replace(/\bpi\b/g, `(${Math.PI})`);
-    s = s.replaceAll('^', '**');
-
-    s = s.replace(/\*\*\s*-\s*([a-zA-Z0-9_.]+)/g, '**(-$1)');
-    s = s.replace(/\*\*\s*\+\s*([a-zA-Z0-9_.]+)/g, '**($1)');
-
-    s = s.replaceAll('×', '*');
-
-    for (const fn of ['sqrt','cbrt','exp','log','abs','pow','sin','cos','tan','asin','acos','atan','floor','ceil','round','max','min']) {
-      s = s.replace(new RegExp(`\\b${fn}\\(`, 'g'), 'Math.' + fn + '(');
+    // Build scope: physics constants + user variables
+    const scope = buildReplacements(unitSys);
+    // User variable values override constants
+    for (const [k, v] of Object.entries(varValues)) {
+      if (v !== null && v !== undefined && !isNaN(v)) scope[k] = Number(v);
     }
-    s = s.replace(/\bln\(/g, 'Math.log(');
 
-    s = s.replaceAll('Math.Math.', 'Math.');
+    // Unit tokens in scope
+    scope.eV  = unitSys === "si" ? eVtoJ : 1;
+    scope.keV = unitSys === "si" ? 1e3 * eVtoJ : 1e3;
+    scope.MeV = unitSys === "si" ? 1e6 * eVtoJ : 1e6;
+    scope.GeV = unitSys === "si" ? 1e9 * eVtoJ : 1e9;
+
+    // Syntax conversions for math.js
+    s = s.replaceAll('**', '^');
+    s = s.replaceAll('×', '*');
+    s = s.replaceAll('π', 'pi');
+    // math.js uses log() for natural log; our parser outputs ln()
+    s = s.replace(/\bln\(/g, 'log(');
+    // Remove any accidental Math. prefixes
+    s = s.replaceAll('Math.', '');
+
     s = balanceParens(s);
 
-    const result = Function('"use strict"; return (' + s + ')')();
+    // Evaluate using math.js (has built-in pi, e, sin, cos, sqrt, etc.)
+    const result = math.evaluate(s, scope);
 
-    if (typeof result === 'number' && !isNaN(result)) return result;
-    return null;
+    // Extract numeric value (math.js may return BigNumber or Matrix)
+    let numResult;
+    if (typeof result === 'number') {
+      numResult = result;
+    } else if (result && typeof result.toNumber === 'function') {
+      numResult = result.toNumber();
+    } else {
+      return null;
+    }
+
+    if (isNaN(numResult)) return null;
+    return cleanFloat(numResult);
   } catch(err) {
     return null;
   }
