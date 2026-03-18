@@ -4,7 +4,7 @@
 LatexCalculator is a web-based tool designed to streamline complex physics calculations. It allows users to paste LaTeX expressions directly and evaluate them using built-in physical constants from both SI and eV unit systems.
 
 ## 🚀 Live Demo
-Check out the tool here: [https://aerobaek99.github.io/LatexCalculator/](https://aerobaek99.github.io/LatexCalculator/)
+Check out the tool here: [https://calc.gopilot.blog/](https://calc.gopilot.blog)
 
 ## ✨ Key Features
 - **LaTeX Parsing:** Automatically extracts variables from LaTeX expressions (e.g., `\frac`, `\sqrt`, `\hbar`).
