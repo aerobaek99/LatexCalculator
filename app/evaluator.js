@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-//  UTILITIES & EVALUATOR (nerdamer CAS + math.js fallback)
+//  UTILITIES & EVALUATOR (nerdamer CAS symbolic + math.js numeric)
 // ═══════════════════════════════════════════════════════════════
 function fmt(val, sig = 8) {
   if (typeof val !== 'number' || isNaN(val)) return "Error";
@@ -27,148 +27,72 @@ function formatReadableSci(val) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  SAFE NUMBER FORMATTING — Convert scientific notation numbers
-//  to nerdamer-safe format so that `e` in 1.602e-19 is not
-//  confused with Euler's number.
-//  Example: 1.602e-19 → (1.602*10^(-19))
+//  NERDAMER CAS — Symbolic simplification layer
+//  Simplifies trig expressions symbolically (sin(pi)→0, etc.)
+//  then returns a simplified expression string for math.js to
+//  evaluate numerically. This avoids nerdamer's precision issues
+//  with very small/large floating-point numbers.
 // ═══════════════════════════════════════════════════════════════
-function safeNumStr(num) {
-  if (typeof num !== 'number' || !isFinite(num)) return String(num);
-  if (num === 0) return '0';
-
-  var str = num.toPrecision(15);
-  // If it contains 'e' notation, convert to (mantissa*10^(exp))
-  if (/[eE]/.test(str)) {
-    var parts = str.split(/[eE]/);
-    var mantissa = parseFloat(parts[0]);
-    var exp = parseInt(parts[1], 10);
-    return '(' + mantissa + '*10^(' + exp + '))';
-  }
-  return str;
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  NERDAMER CAS EVALUATOR — Symbolic evaluation engine
-//  Handles sin(pi)=0, cos(pi)=-1, etc. symbolically.
-//  Uses nerdamer for symbolic simplification, then extracts
-//  the numeric result.
-// ═══════════════════════════════════════════════════════════════
-function evalWithNerdamer(expr, unitSys, varValues) {
-  if (typeof nerdamer === 'undefined') return null;
+function casSimplify(expr) {
+  if (typeof nerdamer === 'undefined') return expr;
 
   try {
     var s = expr;
 
-    // Syntax normalization
+    // Normalize syntax for nerdamer
     s = s.replaceAll('**', '^');
     s = s.replaceAll('×', '*');
     s = s.replaceAll('π', 'pi');
     s = s.replace(/\bln\(/g, 'log(');
     s = s.replaceAll('Math.', '');
 
-    // Build variable substitution map with safe number formatting
-    var scope = buildReplacements(unitSys);
-    for (var k in varValues) {
-      var v = varValues[k];
-      if (v !== null && v !== undefined && !isNaN(v)) scope[k] = Number(v);
-    }
+    // Protect 'e' (elementary charge) from nerdamer's built-in Euler e:
+    // 1. Protect scientific notation e (1.602e-19)
+    s = s.replace(/([0-9])[eE]([+-]?\d)/g, '$1_SCI_$2');
+    // 2. e_n → _EULER_ placeholder
+    s = s.replace(/\be_n\b/g, '_EULER_');
+    // 3. bare e → _EC_ (so nerdamer doesn't treat it as Euler)
+    s = s.replace(/\be\b(?!_)/g, '_EC_');
+    // 4. _EULER_ → _EULR_ (keep as variable, don't use nerdamer's e)
+    s = s.replace(/_EULER_/g, '_EULR_');
+    // 5. Restore scientific notation
+    s = s.replace(/_SCI_/g, 'e');
 
-    // Unit tokens
-    scope.eV  = unitSys === "si" ? eVtoJ : 1;
-    scope.keV = unitSys === "si" ? 1e3 * eVtoJ : 1e3;
-    scope.MeV = unitSys === "si" ? 1e6 * eVtoJ : 1e6;
-    scope.GeV = unitSys === "si" ? 1e9 * eVtoJ : 1e9;
-
-    // Handle the e/e_n conflict:
-    // In our physics data: e = elementary charge, e_n = Euler's number
-    // In nerdamer: e = Euler's number
-    // Strategy: rename our physics `e` to `_ec_` before CAS evaluation,
-    // and `e_n` maps to nerdamer's built-in `e` (Euler's number).
-
-    // Replace e_n references with nerdamer's built-in e (Euler's number)
-    // Must be done BEFORE replacing bare 'e' to avoid double-replacement
-    s = s.replace(/\be_n\b/g, 'e');
-    // Remove e_n from scope — let nerdamer use its built-in Euler e
-    delete scope['e_n'];
-
-    // Rename bare 'e' (elementary charge) to a safe placeholder
-    // Use word boundary but exclude e_n (already handled above) and scientific notation
-    s = s.replace(/([0-9])[eE]([+-]?\d)/g, '$1_SCI_$2'); // protect sci notation
-    s = s.replace(/\be\b(?!_)/g, '_ec_');
-    s = s.replace(/_SCI_/g, 'e'); // restore sci notation
-
-    // Move 'e' scope entry to '_ec_'
-    if (scope['e'] !== undefined) {
-      scope['_ec_'] = scope['e'];
-      delete scope['e'];
-    }
-    // Also handle e_charge key
-    if (scope['e_charge'] !== undefined) {
-      scope['_ec_'] = scope['e_charge'];
-      delete scope['e_charge'];
-    }
-
-    // Now replace all known variables in the expression with their safe numeric values.
-    // We need to do textual substitution because nerdamer.setVar has issues with
-    // very small/large numbers in scientific notation.
-
-    // Sort variable names by length (longest first) to avoid partial replacement
-    var varNames = Object.keys(scope).sort(function(a, b) { return b.length - a.length; });
-
-    for (var i = 0; i < varNames.length; i++) {
-      var vn = varNames[i];
-      var vv = scope[vn];
-      if (vv === undefined || vv === null) continue;
-      // Skip pi — let nerdamer handle it symbolically
-      if (vn === 'pi') continue;
-
-      var safeVal = safeNumStr(vv);
-      // Replace variable with its safe numeric value using word boundaries
-      var re = new RegExp('\\b' + vn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g');
-      s = s.replace(re, '(' + safeVal + ')');
-    }
-
-    // Also replace scientific notation numbers in the expression itself
-    s = s.replace(/([0-9]*\.?[0-9]+)[eE]([+-]?[0-9]+)/g, function(match, mantissa, exp) {
-      return '(' + mantissa + '*10^(' + exp + '))';
-    });
+    // Also protect other known physics variables from nerdamer interpretation
+    // by keeping them as-is (nerdamer treats unknown names as symbolic variables)
 
     s = balanceParens(s);
 
-    // Use nerdamer to symbolically evaluate, then extract numeric value
-    var result = nerdamer(s).evaluate();
-    var numResult = result.valueOf();
+    // Nerdamer simplifies symbolically: sin(pi)→0, cos(pi)→-1, etc.
+    // Variables like _EC_, eps_0, etc. remain symbolic.
+    var simplified = nerdamer(s).text();
 
-    if (typeof numResult === 'string') {
-      // nerdamer sometimes returns string for special values
-      numResult = parseFloat(numResult);
-    }
+    // Convert nerdamer output back to math.js compatible format:
+    // nerdamer outputs: x^(-1) → needs to stay as is (math.js handles it)
+    // Restore our variable names
+    simplified = simplified.replace(/_EC_/g, 'e');
+    simplified = simplified.replace(/_EULR_/g, 'e_n');
 
-    if (typeof numResult === 'number' && !isNaN(numResult)) {
-      return numResult;
-    }
-
-    return null;
+    return simplified;
   } catch (err) {
-    return null;
+    return expr;
   }
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  EXPRESSION EVALUATOR — Three-tier evaluation:
-//  1. nerdamer CAS (symbolic, handles sin(pi)=0 exactly)
-//  2. math.js (numeric, good fallback)
-//  3. Function() (legacy fallback)
+//  EXPRESSION EVALUATOR — Hybrid CAS + numeric approach:
+//  1. nerdamer CAS simplifies symbolically (sin(pi)→0)
+//  2. math.js evaluates numerically (handles small numbers)
+//  3. Function() as legacy fallback
 // ═══════════════════════════════════════════════════════════════
 function evalExpr(expr, unitSys, varValues = {}) {
-  // ── Tier 1: nerdamer CAS (symbolic) ──
-  var casResult = evalWithNerdamer(expr, unitSys, varValues);
-  if (casResult !== null) return casResult;
+  // ── Step 1: Symbolic simplification with nerdamer CAS ──
+  var simplified = casSimplify(expr);
 
-  // ── Tier 2: math.js (numeric) ──
+  // ── Step 2: Numeric evaluation with math.js ──
   if (typeof math !== 'undefined') {
     try {
-      var s = expr;
+      var s = simplified;
 
       // Build scope: physics constants + user variables
       var scope = buildReplacements(unitSys);
@@ -210,9 +134,9 @@ function evalExpr(expr, unitSys, varValues = {}) {
     }
   }
 
-  // ── Tier 3: Legacy fallback (Function-based) ──
+  // ── Step 3: Legacy fallback (Function-based) ──
   try {
-    var s = expr;
+    var s = simplified;
     var reps = buildReplacements(unitSys);
     var allReps = Object.assign({}, reps, varValues);
 

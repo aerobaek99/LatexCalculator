@@ -145,8 +145,9 @@ function latexToExpr(tex) {
   s = s.replace(/([\d.]+)\s*\*\s*10\s*\^(-?\d+)/g, (_, num, exp) => `${num} * 10**(${exp})`);
   s = s.replace(/([\d.]+)\s*\*\s*10\s*\*\*\s*\(([^)]+)\)/g, (_, num, exp) => `${num} * 10**(${exp})`);
 
-  s = s.replace(/(^|[^a-zA-Z_])e\s*\^\{/g, '$1e_n^{');
-  s = s.replace(/(^|[^a-zA-Z_])e\s*\^([^{])/g, '$1e_n^$2');
+  // NOTE: Do NOT auto-convert e^{} to e_n^{} here.
+  // In physics, bare `e` = elementary charge (e^2 in Coulomb's law).
+  // For Euler's number, users should write e_n or \exp(x).
 
   s = s.replaceAll('\\left(', '(').replaceAll('\\right)', ')');
   s = s.replaceAll('\\left[', '(').replaceAll('\\right]', ')');
