@@ -154,8 +154,8 @@ const EXPR_PRESETS = [
 const eVtoJ = 1.60217657e-19;
 
 const DIMENSIONS = {
-  none:   { label: "Dimensionless", conversions: (v) => [{ label: "Value", val: v }] },
-  energy: { label: "Energy", conversions: (v, sys) => {
+  none:   { label: "Dimensionless", mainUnit: null, conversions: (v) => [{ label: "Value", val: v }] },
+  energy: { label: "Energy", mainUnit: (sys) => sys === "si" ? "J" : "eV", conversions: (v, sys) => {
     const inJ  = sys === "si" ? v : v * eVtoJ;
     const inEv = sys === "si" ? v / eVtoJ : v;
     return [
@@ -165,7 +165,7 @@ const DIMENSIONS = {
       { label: "Hz (E/h)", val: inEv/4.13566752e-15 }, { label: "kJ/mol", val: inJ*6.0221413e23/1000 },
     ];
   }},
-  length: { label: "Length", conversions: (v, sys) => {
+  length: { label: "Length", mainUnit: () => "m", conversions: (v, sys) => {
     const inM = sys === "si" ? v : v * 1e-9;
     return [
       { label: "m", val: inM }, { label: "nm", val: inM*1e9 }, { label: "Å", val: inM*1e10 },
@@ -173,23 +173,23 @@ const DIMENSIONS = {
       { label: "mm", val: inM*1e3 }, { label: "cm", val: inM*1e2 }, { label: "a₀", val: inM/5.291772109e-11 },
     ];
   }},
-  mass: { label: "Mass", conversions: (v, sys) => {
+  mass: { label: "Mass", mainUnit: () => "kg", conversions: (v, sys) => {
     const inKg = sys === "si" ? v : v*1e6*eVtoJ/(2.99792458e8**2);
     return [
       { label: "kg", val: inKg }, { label: "g", val: inKg*1e3 }, { label: "u", val: inKg/1.66053892e-27 },
       { label: "MeV/c²", val: (inKg/1.66053892e-27)*931.49406 }, { label: "mₑ", val: inKg/9.1093829e-31 },
     ];
   }},
-  time: { label: "Time", conversions: (v) => [
+  time: { label: "Time", mainUnit: () => "s", conversions: (v) => [
     { label: "s", val: v }, { label: "ms", val: v*1e3 }, { label: "μs", val: v*1e6 },
     { label: "ns", val: v*1e9 }, { label: "ps", val: v*1e12 }, { label: "fs", val: v*1e15 },
   ]},
-  temperature: { label: "Temperature", conversions: (v) => [
+  temperature: { label: "Temperature", mainUnit: () => "K", conversions: (v) => [
     { label: "K", val: v }, { label: "°C", val: v-273.15 },
     { label: "°F", val: (v-273.15)*9/5+32 },
     { label: "kT (eV)", val: 8.617332e-5*v }, { label: "kT (J)", val: 1.380649e-23*v },
   ]},
-  frequency: { label: "Frequency", conversions: (v) => [
+  frequency: { label: "Frequency", mainUnit: () => "Hz", conversions: (v) => [
     { label: "Hz", val: v }, { label: "kHz", val: v*1e-3 }, { label: "MHz", val: v*1e-6 },
     { label: "GHz", val: v*1e-9 }, { label: "THz", val: v*1e-12 }, { label: "E (eV)", val: v*4.13566752e-15 },
   ]},
