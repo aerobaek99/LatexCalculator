@@ -308,26 +308,37 @@ function ExpressionTab({
           <div style={{ color: "#5577aa", fontSize: 11, marginBottom: 6 }}>All tokens are built-in constants — Ready to evaluate</div>
         )}
 
-        {/* Result */}
-        {exprResult !== null && (
-          <div style={{ background: "rgba(20,40,80,0.4)", borderRadius: 6, border: "1px solid rgba(80,130,220,0.3)", padding: "10px 14px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              {displayLhs ? (
-                <LatexRenderer
-                  tex={displayLhs + " ="}
-                  katexReady={katexReady}
-                  style={{ fontSize: 20, color: "#a0ccff", display: "inline-block" }}
-                />
-              ) : (
-                <span style={{ color: "#5a8abb", fontSize: 20 }}>= </span>
-              )}
-              <span style={{ fontFamily: monoFont, fontSize: 26, fontWeight: 600, color: "#7eb8ff" }}>{fmt(exprResult)}</span>
-              {(exprResult !== 0 && isFinite(exprResult) && (Math.abs(exprResult) < 1e-3 || Math.abs(exprResult) >= 1e5)) ? (
-                <span style={{ fontFamily: monoFont, fontSize: 14, color: "#5a8abb", marginLeft: 4 }}>({formatReadableSci(exprResult)})</span>
-              ) : null}
+        {/* Result — always display in SI base unit (m, J, kg, s, K, Hz) */}
+        {exprResult !== null && (() => {
+          const dim = DIMENSIONS[resultDim];
+          const mainUnitLabel = dim && dim.mainUnit ? dim.mainUnit(unitSys) : null;
+          // Find the conversion entry matching the main unit to get the SI-converted value
+          let displayVal = exprResult;
+          if (mainUnitLabel && exprConversions.length > 0) {
+            const match = exprConversions.find(c => c.label === mainUnitLabel);
+            if (match) displayVal = match.val;
+          }
+          return (
+            <div style={{ background: "rgba(20,40,80,0.4)", borderRadius: 6, border: "1px solid rgba(80,130,220,0.3)", padding: "10px 14px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                {displayLhs ? (
+                  <LatexRenderer
+                    tex={displayLhs + " ="}
+                    katexReady={katexReady}
+                    style={{ fontSize: 20, color: "#a0ccff", display: "inline-block" }}
+                  />
+                ) : (
+                  <span style={{ color: "#5a8abb", fontSize: 20 }}>= </span>
+                )}
+                <span style={{ fontFamily: monoFont, fontSize: 26, fontWeight: 600, color: "#7eb8ff" }}>{fmt(displayVal)}</span>
+                {mainUnitLabel && <span style={{ fontSize: 16, color: "#5a8abb", fontWeight: 500 }}>{mainUnitLabel}</span>}
+                {(displayVal !== 0 && isFinite(displayVal) && (Math.abs(displayVal) < 1e-3 || Math.abs(displayVal) >= 1e5)) ? (
+                  <span style={{ fontFamily: monoFont, fontSize: 14, color: "#5a8abb", marginLeft: 4 }}>({formatReadableSci(displayVal)})</span>
+                ) : null}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* Auto conversions */}
